@@ -75,7 +75,7 @@ def mapear_e_processar_upload(df_bruto):
             if chave in ['created_at', 'picked_at', 'shipped_at', 'promised_date', 'delivered_at']:
                 continue 
             elif chave == 'is_infull': df_novo['is_infull'] = 1
-            elif KEY == 'freight_cost': df_novo['freight_cost'] = 25.0
+            elif chave == 'freight_cost': df_novo['freight_cost'] = 25.0
             elif chave == 'product_margin': df_novo['product_margin'] = 60.0
             else:
                 st.error(f"❌ Coluna vital não identificada: precisamos de algo parecido com **{chave}** na planilha.")
