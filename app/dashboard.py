@@ -1,7 +1,7 @@
 import sys
 import os
 
-# 🚀 Linha mágica: Garante que o Streamlit enxergue as pastas 'dags' e 'src' na raiz do projeto
+# 🚀 Linha mágica: Garante que o Streamlit enxergue as pastas na raiz do projeto
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 import streamlit as st
@@ -9,7 +9,6 @@ import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
 
-# Importações seguras das camadas internas do nosso pipeline de engenharia
 from dags.ingestion_dag import gerar_dados_logistica_hibrida
 from src.silver_processing import processar_camada_silver
 from src.gold_metrics import consolidar_camada_gold
@@ -22,7 +21,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# 🎨 Injeção de CSS para o tema Dark Premium com Cards Brancos
+# Injeção de CSS para o tema Dark Premium com Cards Brancos
 st.markdown("""
     <style>
     .stApp { background-color: #0f141c; }
@@ -41,9 +40,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# Função auxiliar para padronizar e mapear colunas do arquivo do gestor
 def mapear_e_processar_upload(df_bruto):
-    # 🌟 ATUALIZADO: Dicionário expandido com os cabeçalhos reais da sua nova planilha
     mapeamento = {
         'order_id': ['order_id', 'id_pedido', 'pedido', 'codigo_pedido', 'order'],
         'route': ['route', 'rota', 'regiao', 'uf', 'destino', 'state', 'cidade', 'custos/guarulhos'],
@@ -58,24 +55,19 @@ def mapear_e_processar_upload(df_bruto):
     }
     
     df_novo = pd.DataFrame()
-    # Converte os cabeçalhos originais para minúsculo e remove espaços para bater com o dicionário
     colunas_originais = {col.lower().strip(): col for col in df_bruto.columns}
     
-    # Tenta encontrar correspondências para cada coluna vital
     for chave, sinonimos in mapeamento.items():
         achou = False
         for s in sinonimos:
             if s in colunas_originais:
-                # Trata casos específicos de colunas que não são números diretos ou precisam de conversão
                 if chave == 'is_infull' and df_bruto[colunas_originais[s]].dtype == 'object':
-                    # Se vier 'Entregue' ou 'Sucesso' vira 1, senão 0
                     df_novo[chave] = np.where(df_bruto[colunas_originais[s]].astype(str).str.lower().str.contains('entregue|sucesso|ok|1'), 1, 0)
                 else:
                     df_novo[chave] = df_bruto[colunas_originais[s]]
                 achou = True
                 break
         if not achou:
-            # 🌟 INTELIGÊNCIA DE FALLBACK: Se não achar datas, nós criamos dinamicamente para não travar!
             if chave in ['created_at', 'picked_at', 'shipped_at', 'promised_date', 'delivered_at']:
                 continue 
             elif chave == 'is_infull': df_novo['is_infull'] = 1
@@ -85,16 +77,13 @@ def mapear_e_processar_upload(df_bruto):
                 st.error(f"❌ Coluna vital não identificada: precisamos de algo parecido com **{chave}** na planilha.")
                 return False
 
-    # 🌟 GERAÇÃO DE DATAS AUTOMÁTICA (Caso a planilha não possua carimbos de tempo)
     data_base = pd.to_datetime('2026-09-01 10:00:00')
     if 'created_at' not in df_novo.columns:
         df_novo['created_at'] = data_base
         df_novo['picked_at'] = data_base + pd.to_timedelta('2h')
         df_novo['shipped_at'] = data_base + pd.to_timedelta('6h')
         
-        # Se a planilha tiver a coluna de prazo em dias, usamos ela para calcular a data prometida e realizada
         if 'promised_date' in df_novo.columns:
-            # Garante que os dias sejam interpretados como números inteiros
             dias_prazo = pd.to_numeric(df_novo['promised_date'], errors='coerce').fillna(3).astype(int)
             df_novo['promised_date'] = data_base + pd.to_timedelta(dias_prazo, unit='D')
             df_novo['delivered_at'] = data_base + pd.to_timedelta(dias_prazo, unit='D') - pd.to_timedelta('4h')
@@ -107,30 +96,25 @@ def mapear_e_processar_upload(df_bruto):
     else:
         df_novo['source_type'] = 'UPLOAD_MANUAL'
                 
-    # Força a tipagem de datetime padrão nas datas geradas ou mapeadas
     colunas_data = ["created_at", "picked_at", "shipped_at", "promised_date", "delivered_at"]
     for col in colunas_data:
         df_novo[col] = pd.to_datetime(df_novo[col], errors='coerce')
         
-    # Corrige formatações de preço vindas com vírgula do Excel/Sheets
     for col in ['freight_cost', 'product_margin']:
         if df_novo[col].dtype == 'object':
             df_novo[col] = df_novo[col].astype(str).str.replace(',', '.').astype(float)
         df_novo[col] = pd.to_numeric(df_novo[col], errors='coerce').fillna(0.0)
             
-    # Salva na pasta temporária bronze para rodar o pipeline estruturado
     os.makedirs("data/bronze", exist_ok=True)
     df_novo.to_csv("data/bronze/orders_raw.csv", index=False)
     
-    # Roda a esteira Silver e Gold reais do seu backend
     processar_camada_silver()
     consolidar_camada_gold()
     return True
 
-# 🎛️ 2. BARRA LATERAL (UPLOADER DE ARQUIVOS E DEMO)
+# 🎛️ 2. BARRA LATERAL
 with st.sidebar:
     st.markdown("<h2 style='text-align: center; color: #a3e635;'>🛡️ LOGIX HUB</h2>", unsafe_allow_html=True)
-    st.markdown("<p style='text-align: center; color: #64748b;'>SaaS Analytics Core</p>", unsafe_allow_html=True)
     st.markdown("---")
     
     st.subheader("📥 Upload Your Data")
@@ -139,35 +123,31 @@ with st.sidebar:
     if arquivo_usuario is not None:
         if "ultimo_arquivo" not in st.session_state or st.session_state.ultimo_arquivo != arquivo_usuario.name:
             try:
-                with st.spinner("⚡ Processando e limpando dados da sua planilha..."):
+                with st.spinner("⚡ Processando e limpando dados..."):
                     df_bruto = pd.read_csv(arquivo_usuario) if arquivo_usuario.name.endswith('.csv') else pd.read_excel(arquivo_usuario)
                     if mapear_e_processar_upload(df_bruto):
                         st.session_state.ultimo_arquivo = arquivo_usuario.name
-                        st.success("🎉 Arquivo integrado com sucesso!")
+                        st.success("🎉 Arquivo integrado!")
                         st.rerun()
             except Exception as e:
                 st.error(f"Erro ao ler arquivo: {e}")
             
     st.markdown("---")
     st.subheader("🕹️ Demo Environment")
-    st.markdown("Caso não tenha uma planilha em mãos, clique abaixo para gerar 60.000 linhas de demonstração:")
-    
     if st.button("⚡ Generate Demo Data (60k)", type="secondary"):
-        with st.spinner("⏳ Criando massa analítica de teste (60.000 registros)..."):
+        with st.spinner("⏳ Criando massa analítica de teste..."):
             if "ultimo_arquivo" in st.session_state:
                 del st.session_state["ultimo_arquivo"]
-            
             gerar_dados_logistica_hibrida(num_pedidos=60000)
             processar_camada_silver()
             consolidar_camada_gold()
             st.session_state.ultimo_arquivo = "demo_60k"
-        st.success("✅ Ambiente de testes pronto!")
+        st.success("✅ Ambiente pronto!")
         st.rerun()
 
     st.markdown("---")
     st.subheader("Filtros Dinâmicos")
     PATH_ROTAS = "data/gold/kpi_performance_rotas.csv"
-    PATH_ORIGEM = "data/gold/kpi_SLA_origem.csv"
     
     if os.path.exists(PATH_ROTAS):
         df_rotas_init = pd.read_csv(PATH_ROTAS)
@@ -181,7 +161,7 @@ st.markdown("<h1 style='text-align: center; margin-bottom: 10px;'>Logistics & Su
 
 if not os.path.exists(PATH_ROTAS) or len(todas_rotas) == 0:
     st.markdown("<br><br>", unsafe_allow_html=True)
-    st.info("👋 **Bem-vindo ao SaaS Logix Hub!** Para ver o sistema funcionando, faça o upload de uma planilha na barra lateral ou clique no botão **'Generate Demo Data (60k)'** para carregar o ambiente de simulação.")
+    st.info("👋 **Bem-vindo ao SaaS Logix Hub!** Faça o upload de uma planilha na barra lateral ou clique em **'Generate Demo Data (60k)'**.")
 else:
     df_rotas = pd.read_csv(PATH_ROTAS)
     df_filtrado = df_rotas[df_rotas['route'].isin(rotas_selecionadas)].copy()
@@ -194,3 +174,34 @@ else:
         custo_frete = df_filtrado['custo_total_frete'].sum()
         lead_time_last_mile = df_filtrado['lead_time_last_mile_horas'].mean()
 
+        c1, c2, c3 = st.columns(3)
+        with c1: st.metric(label="TOTAL FREIGHT COST", value=f"R$ {custo_frete:,.2f}")
+        with c2: st.metric(label="OTIF PERFORMANCE", value=f"{otif_medio:.1f}%")
+        with c3: st.metric(label="TOTAL VOLUMETRIA", value=f"{total_pedidos:,} pacotes")
+
+        st.markdown("<br>", unsafe_allow_html=True)
+
+        col_g1, col_g2 = st.columns(2)
+        with col_g1:
+            st.markdown("### Distribuição de Volume por Região/Rota")
+            df_g1 = df_filtrado.sort_values(by="total_pedidos", ascending=True)
+            st.bar_chart(data=df_g1, x="route", y="total_pedidos", color="#a3e635", horizontal=True)
+        with col_g2:
+            st.markdown("### Taxa de Lucratividade Operacional (%)")
+            df_g2 = df_filtrado.sort_values(by="rotas_lucrativas_pct", ascending=True)
+            st.bar_chart(data=df_g2, x="route", y="rotas_lucrativas_pct", color="#84cc16", horizontal=True)
+
+        st.markdown("<br>", unsafe_allow_html=True)
+
+        col_inf1, col_inf2 = st.columns(2)
+        with col_inf1:
+            st.markdown("<p style='text-align: center; font-weight: bold; color: white;'>Tempo Médio de Envio Last-Mile (Dias)</p>", unsafe_allow_html=True)
+            valor_dias = round(lead_time_last_mile / 24, 1)
+            max_escala = max(10.0, valor_dias * 1.5)
+            
+            fig_gauge = go.Figure(go.Indicator(
+                mode = "gauge+number",
+                value = valor_dias,
+                number = {'font': {'color': "white", 'size': 45}, 'suffix': ' dias'},
+                gauge = {
+                    'axis': {'range': [0, max_escala], 'tickwidth': 1, 'tickcolor': "white"},
