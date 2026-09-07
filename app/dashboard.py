@@ -1,7 +1,7 @@
 import sys
 import os
 
-# 🚀 Linha mágica: Garante que o Streamlit enxergue as pastas na raiz do projeto
+# 🚀 Linha mágica: Garante que o Streamlit enxergue as pastas 'dags' e 'src' na raiz do projeto
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 import streamlit as st
@@ -9,6 +9,7 @@ import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
 
+# Importações seguras das camadas internas do nosso pipeline de engenharia
 from dags.ingestion_dag import gerar_dados_logistica_hibrida
 from src.silver_processing import processar_camada_silver
 from src.gold_metrics import consolidar_camada_gold
@@ -21,7 +22,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Injeção de CSS para o tema Dark Premium com Cards Brancos
+# 🎨 Injeção de CSS para o tema Dark Premium com Cards Brancos
 st.markdown("""
     <style>
     .stApp { background-color: #0f141c; }
@@ -40,7 +41,9 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
+# Função auxiliar para padronizar e mapear colunas do arquivo do gestor
 def mapear_e_processar_upload(df_bruto):
+    # Dicionário expandido com os cabeçalhos reais da sua nova planilha
     mapeamento = {
         'order_id': ['order_id', 'id_pedido', 'pedido', 'codigo_pedido', 'order'],
         'route': ['route', 'rota', 'regiao', 'uf', 'destino', 'state', 'cidade', 'custos/guarulhos'],
@@ -57,6 +60,7 @@ def mapear_e_processar_upload(df_bruto):
     df_novo = pd.DataFrame()
     colunas_originais = {col.lower().strip(): col for col in df_bruto.columns}
     
+    # Tenta encontrar correspondências para cada coluna vital
     for chave, sinonimos in mapeamento.items():
         achou = False
         for s in sinonimos:
@@ -68,6 +72,7 @@ def mapear_e_processar_upload(df_bruto):
                 achou = True
                 break
         if not achou:
+            # INTELIGÊNCIA DE FALLBACK: Se não achar datas, nós pulamos para criar dinamicamente
             if chave in ['created_at', 'picked_at', 'shipped_at', 'promised_date', 'delivered_at']:
                 continue 
             elif chave == 'is_infull': df_novo['is_infull'] = 1
@@ -77,6 +82,7 @@ def mapear_e_processar_upload(df_bruto):
                 st.error(f"❌ Coluna vital não identificada: precisamos de algo parecido com **{chave}** na planilha.")
                 return False
 
+    # GERAÇÃO DE DATAS AUTOMÁTICA (Caso a planilha não possua carimbos de tempo)
     data_base = pd.to_datetime('2026-09-01 10:00:00')
     if 'created_at' not in df_novo.columns:
         df_novo['created_at'] = data_base
@@ -196,12 +202,4 @@ else:
         col_inf1, col_inf2 = st.columns(2)
         with col_inf1:
             st.markdown("<p style='text-align: center; font-weight: bold; color: white;'>Tempo Médio de Envio Last-Mile (Dias)</p>", unsafe_allow_html=True)
-            valor_dias = round(lead_time_last_mile / 24, 1)
-            max_escala = max(10.0, valor_dias * 1.5)
-            
-            fig_gauge = go.Figure(go.Indicator(
-                mode = "gauge+number",
-                value = valor_dias,
-                number = {'font': {'color': "white", 'size': 45}, 'suffix': ' dias'},
-                gauge = {
-                    'axis': {'range': [0, max_escala], 'tickwidth': 1, 'tickcolor': "white"},
+
