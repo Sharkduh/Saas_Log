@@ -7,7 +7,6 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import streamlit as st
 import pandas as pd
 import numpy as np
-import plotly.graph_objects as go
 
 # Importações seguras das camadas internas do nosso pipeline de engenharia
 from dags.ingestion_dag import gerar_dados_logistica_hibrida
@@ -199,6 +198,7 @@ else:
 
         st.markdown("<br>", unsafe_allow_html=True)
 
+        # ⏱️ 6. SEÇÃO INFERIOR: METRICAS DE LEAD TIME NATIIVAS & TENDÊNCIAS
         col_inf1, col_inf2 = st.columns(2)
+        
         with col_inf1:
-            st.markdown("<p style='text-align: center; font-weight: bold; color: white;'>Tempo Médio de Envio Last-Mile (Dias)</p>", unsafe_allow_html=True)
