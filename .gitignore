@@ -1,0 +1,19 @@
+# Ambientes virtuais
+.venv/
+__pycache__/
+*.pyc
+
+# Dados locais (Os arquivos pesados ficam de fora)
+data/bronze/*.csv
+data/silver/*.csv
+data/gold/*.csv
+!data/bronze/planilha_teste_gestor.csv # Deixa essa planilha pública para o gestor testar!
+
+# Banco de dados e configurações do Airflow local
+airflow.db
+airflow.cfg
+*.log
+standalone_admin_password.txt
+simple_auth_manager_passwords.json*
+.logs/
+logs/

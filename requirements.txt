@@ -1,0 +1,21 @@
+# Processamento de dados e analise
+pandas>=2.0.0
+numpy>=1.24.0
+
+# Armazenamento e Analytics ultrarrápido (leve para o Chromebook)
+duckdb>=0.9.0
+
+# Interface Gráfica
+streamlit>=1.25.0
+
+# Qualidade de Dados e Testes
+pytest>=7.0.0
+
+# Orquestração (Se formos rodar local leve sem Docker completo)
+apache-airflow>=2.7.0
+
+plotly>=5.0.0
+
+# Para rodar em Diferentes PCs
+openpyxl>=3.1.0
+
