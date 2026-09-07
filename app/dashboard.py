@@ -198,8 +198,24 @@ else:
 
         st.markdown("<br>", unsafe_allow_html=True)
 
-        # ⏱️ 6. SEÇÃO INFERIOR: METRICAS DE LEAD TIME NATIIVAS & TENDÊNCIAS
-        col_inf1, col_inf2 = st.columns(2)
+        # ⏱️ 6. SEÇÃO INFERIOR RESILIENTE
+        st.markdown("---")
+        st.markdown("<h3 style='color: white;'>⏱️ Lead Time & Gargalos Operacionais</h3>", unsafe_allow_html=True)
         
-        with col_inf1:
-            st.markdown("<p style='font-weight: bold; color: white;'>Tempo Médio de Envio Last-Mile (Dias)</p>", unsafe_allow_html=True)
+        # Valor calculado em dias
+        valor_dias = float(round(lead_time_last_mile / 24, 1)) if not np.isnan(lead_time_last_mile) else 0.0
+        
+        # Exibe o KPI nativo ocupando a largura total (Imune a falhas de layout)
+        st.metric(
+            label="TEMPO MÉDIO DE ENVIO LAST-MILE (DIAS)", 
+            value=f"{valor_dias} Dias Operacionais", 
+            delta="Meta de Mercado: < 3.0 Dias" if valor_dias <= 3 else "⚠️ SLA de Entrega Estourado"
+        )
+        
+        # Gráfico de Tendências robusto
+        df_trends = df_filtrado[['route', 'lead_time_medio_total_horas', 'lead_time_last_mile_horas']].copy()
+        df_trends = df_trends.rename(columns={
+            'lead_time_medio_total_horas': 'Lead Time Total (h)', 
+            'lead_time_last_mile_horas': 'Last-Mile (h)'
+        })
+        st.bar_chart(data=df_trends, x="route", y=["Lead Time Total (h)", "Last-Mile (h)"], color=["#1e3a8a", "#3b82f6"])
