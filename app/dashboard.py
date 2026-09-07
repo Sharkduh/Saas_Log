@@ -7,6 +7,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import streamlit as st
 import pandas as pd
 import numpy as np
+import plotly.graph_objects as go
 
 # Importações seguras das camadas internas do nosso pipeline de engenharia
 from dags.ingestion_dag import gerar_dados_logistica_hibrida
@@ -42,7 +43,7 @@ st.markdown("""
 
 # Função auxiliar para padronizar e mapear colunas do arquivo do gestor
 def mapear_e_processar_upload(df_bruto):
-    # Dicionário expandido com os cabeçalhos reais da sua nova planilha
+    # Dicionário expandido com os cabeçalhos reais da sua planilha
     mapeamento = {
         'order_id': ['order_id', 'id_pedido', 'pedido', 'codigo_pedido', 'order'],
         'route': ['route', 'rota', 'regiao', 'uf', 'destino', 'state', 'cidade', 'custos/guarulhos'],
@@ -71,11 +72,10 @@ def mapear_e_processar_upload(df_bruto):
                 achou = True
                 break
         if not achou:
-            # INTELIGÊNCIA DE FALLBACK: Se não achar datas, nós pulamos para criar dinamicamente
             if chave in ['created_at', 'picked_at', 'shipped_at', 'promised_date', 'delivered_at']:
                 continue 
             elif chave == 'is_infull': df_novo['is_infull'] = 1
-            elif chave == 'freight_cost': df_novo['freight_cost'] = 25.0
+            elif KEY == 'freight_cost': df_novo['freight_cost'] = 25.0
             elif chave == 'product_margin': df_novo['product_margin'] = 60.0
             else:
                 st.error(f"❌ Coluna vital não identificada: precisamos de algo parecido com **{chave}** na planilha.")
@@ -202,3 +202,4 @@ else:
         col_inf1, col_inf2 = st.columns(2)
         
         with col_inf1:
+            st.markdown("<p style='font-weight: bold; color: white;'>Tempo Médio de Envio Last-Mile (Dias)</p>", unsafe_allow_html=True)
