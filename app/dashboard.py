@@ -202,4 +202,3 @@ else:
         col_inf1, col_inf2 = st.columns(2)
         with col_inf1:
             st.markdown("<p style='text-align: center; font-weight: bold; color: white;'>Tempo Médio de Envio Last-Mile (Dias)</p>", unsafe_allow_html=True)
-
